@@ -1,67 +1,69 @@
-const phrases = ['Platform APIs', 'Backward compatibility', 'Developer experience', 'Operational reliability'];
-const rotatingText = document.querySelector('#rotatingText');
-let phraseIndex = 0;
-setInterval(() => {
-  if (!rotatingText) return;
-  rotatingText.classList.add('changing');
-  setTimeout(() => {
-    phraseIndex = (phraseIndex + 1) % phrases.length;
-    rotatingText.textContent = phrases[phraseIndex];
-    rotatingText.classList.remove('changing');
-  }, 220);
-}, 2600);
-
-const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
-  if (entry.isIntersecting) { entry.target.classList.add('visible'); revealObserver.unobserve(entry.target); }
-}), { threshold: 0.08 });
-document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-const projectSearch = document.querySelector('#projectSearch');
-const cards = [...document.querySelectorAll('.project-card')];
-const count = document.querySelector('#projectCount');
-const noResults = document.querySelector('#noResults');
-projectSearch?.addEventListener('input', () => {
-  const query = projectSearch.value.trim().toLowerCase();
-  let visible = 0;
-  cards.forEach(card => {
-    const show = !query || card.dataset.search.includes(query) || card.textContent.toLowerCase().includes(query);
-    card.hidden = !show;
-    if (show) visible++;
-  });
-  count.textContent = `${visible.toString().padStart(2, '0')} PROJECT${visible === 1 ? '' : 'S'}`;
-  noResults.hidden = visible !== 0;
-});
-
-// The ambient topology redraws with motion, so the role-specific system graphic stays alive behind the page.
-const canvas = document.querySelector('#topology');
-const ctx = canvas?.getContext('2d');
-let width = 0, height = 0, points = [], frame = 0;
-function resizeTopology() {
-  if (!canvas || !ctx) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.6);
-  width = window.innerWidth; height = window.innerHeight;
-  canvas.width = width * dpr; canvas.height = height * dpr;
-  canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const count = Math.max(28, Math.floor(width / 30));
-  points = Array.from({length: count}, (_, i) => ({x: (i % Math.ceil(Math.sqrt(count))) * width / Math.ceil(Math.sqrt(count)) + Math.random()*28, y: Math.floor(i / Math.ceil(Math.sqrt(count))) * height / Math.ceil(Math.sqrt(count)) + Math.random()*30, phase: Math.random()*Math.PI*2, speed: .003 + Math.random()*.006}));
+const words = ["Distributed systems", "Platform APIs", "Service reliability", "Cloud infrastructure"];
+const rotating = document.querySelector("#rotating-text");
+let wordIndex = 0;
+if (rotating) {
+  window.setInterval(() => {
+    rotating.classList.add("is-changing");
+    window.setTimeout(() => {
+      wordIndex = (wordIndex + 1) % words.length;
+      rotating.textContent = words[wordIndex];
+      rotating.classList.remove("is-changing");
+    }, 180);
+  }, 2600);
 }
-function drawTopology() {
-  if (!ctx) return;
-  ctx.clearRect(0,0,width,height); frame++;
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const drift = reduced ? 0 : frame;
-  points.forEach((p,i) => {
-    const x = p.x + Math.sin(drift*p.speed+p.phase)*9, y = p.y + Math.cos(drift*p.speed*.7+p.phase)*8;
-    for (let j=i+1;j<points.length;j++) {
-      const q=points[j], qx=q.x+Math.sin(drift*q.speed+q.phase)*9, qy=q.y+Math.cos(drift*q.speed*.7+q.phase)*8;
-      const d=Math.hypot(x-qx,y-qy);
-      if (d<145) { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(qx,qy); ctx.strokeStyle=`rgba(255,118,91,${(1-d/145)*.16})`; ctx.lineWidth=.55; ctx.stroke(); }
+
+const revealObserver = new IntersectionObserver((entries, observer) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add("is-visible");
+      observer.unobserve(entry.target);
     }
-    const bright=(Math.sin(drift*p.speed*1.8+p.phase)+1)/2;
-    ctx.beginPath();ctx.arc(x,y,1+bright*.8,0,Math.PI*2);ctx.fillStyle=`rgba(255,155,125,${.18+bright*.3})`;ctx.fill();
   });
-  requestAnimationFrame(drawTopology);
-}
-resizeTopology(); drawTopology();
-window.addEventListener('resize', resizeTopology, {passive:true});
+}, { threshold: 0.12 });
+document.querySelectorAll(".reveal").forEach(el => revealObserver.observe(el));
+
+const captions = {
+  nominal: ["CONTRACT VERIFIED", "Validate API version and tenant context before a request enters the service path."],
+  degraded: ["TRAFFIC SURGE", "Use bounded rate limits, load shedding, and capacity headroom to keep shared services responsive."],
+  recovery: ["SERVICE RECOVERED", "Confirm SLOs, trace the request path, and capture the operational evidence for the next iteration."]
+};
+document.querySelectorAll(".loop-button").forEach(button => button.addEventListener("click", () => {
+  const mode = button.dataset.mode;
+  document.querySelectorAll(".loop-button").forEach(other => {
+    const active = other === button;
+    other.classList.toggle("active", active);
+    other.setAttribute("aria-pressed", String(active));
+  });
+  const panel = document.querySelector(".loop-panel");
+  panel.classList.remove("mode-degraded", "mode-recovery");
+  if (mode !== "nominal") panel.classList.add(`mode-${mode}`);
+  document.querySelector("#loop-status").textContent = captions[mode][0];
+  document.querySelector("#loop-caption").textContent = captions[mode][1];
+}));
+
+document.querySelectorAll(".filter-button").forEach(button => button.addEventListener("click", () => {
+  const filter = button.dataset.filter;
+  document.querySelectorAll(".filter-button").forEach(other => {
+    const active = other === button;
+    other.classList.toggle("active", active);
+    other.setAttribute("aria-pressed", String(active));
+  });
+  let visible = 0;
+  document.querySelectorAll(".project-card").forEach(card => {
+    const show = filter === "all" || card.dataset.category === filter;
+    card.hidden = !show;
+    if (show) visible += 1;
+  });
+  document.querySelector("#visible-project-count").textContent = visible;
+}));
+
+const navLinks = [...document.querySelectorAll('.topbar nav a')];
+const sections = navLinks.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+const sectionObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(link => link.classList.toggle('current', link.hash === `#${entry.target.id}`));
+    }
+  });
+}, { rootMargin: '-25% 0px -65% 0px' });
+sections.forEach(section => sectionObserver.observe(section));
